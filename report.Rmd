@@ -1,0 +1,613 @@
+---
+title: "Logistic regression and Poisson regression"
+author: "Anders Christiansen Sørby, Edvard Hove, Angela Maiken Johnsen"
+date: "October 4, 2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("ggplot2")
+#install.packages("GGally")
+#install.packages("rlist")
+library(ggplot2)
+library(rlist)
+library(reshape2)
+library(plyr)
+```
+
+# Part 1: Logistic regression
+
+In this part we model the probability of a successful ascent of a mountain using binary regression with a logit link.
+Let $y_i$ be the number of successful ascents, and let $n_i$ be the total number of attempts (sum of successful and failed) of the $i$th mountain.
+The GLM model is then,
+
+1. Model for response: $Y_i \sim \text{Bin}(n_i, \pi_i) \quad \text{for} \  i = 1,\ldots,113$
+2. Linear predictor: $\eta_i=x^T_i\beta$
+3. Link function: $\eta_i = \ln \left(\frac{\pi_i}{1-\pi_i}\right)$
+
+where $\mathbf{x}_i$ is $p$ dimensional column vector of covariates for observation $i$, and $\boldsymbol\beta$ is the vector of regression parameters.
+
+## a)
+
+Since we assume independent pairs of $(y_i,\mathbf{x}_i)$, the likelihood as a function can then be written as
+
+\begin{align}
+L(\beta) = \prod_{i=1}^n\pi_i^{y_i}(1-\pi_i)^{1-y_i}
+\end{align}
+
+the log-likelihood as a function of $\beta$ is then found by taking the logarithm and using the link function to replace $\pi_i$.
+
+\begin{align}
+\label{eq:loglik}
+\ell(\beta) &= \sum_{i=1}^n y_i \ln \pi_i + (1-y_i) \ln (1-\pi_i) \\
+&= \sum_{i=1}^n y_i \ln \left(\frac{\pi_i}{1-\pi_i}\right) + \ln(1-\pi_i) \\
+&= \sum_{i=1}^n y_i \mathbf{x}_i \beta - \ln(1+e^{\mathbf{x}_i \beta})
+\end{align}
+
+
+The maximum likelihood estimate of $\beta$ is then found by maximizing $\ell(\beta)$.
+For some models this can be expressed on closed form by solving 
+
+\begin{align}
+s(\hat \beta) = \frac{\partial \ell(\hat \beta)}{\partial \beta} = 0
+\end{align}
+
+In this case the equations above are non-linear, and the maximum is found using numerical methods like Newton-Raphson or Fisher scoring. In the case of Fisher scoring that means iterating
+
+\begin{equation}
+\beta^{(t+1)}=\beta^{(t)} + F(\beta^{(t)})^{-1}s(\beta^{(t)}),
+\end{equation}
+
+where F is the expected Fisher information, given by $F = \mathrm{Cov}(s(\beta))$
+
+## b)
+
+```{r}
+filepath <- "https://www.math.ntnu.no/emner/TMA4315/2018h/mountains"
+mount <- read.table(file = filepath, header = TRUE, 
+                    col.names = c("height", "prominence", "fail", "success"))
+```
+
+```{r}
+model1 <- glm(cbind(success, fail) ~ height + prominence, data = mount, family = "binomial")
+summary(model1)
+```
+
+The model parameters are, as can be seen from the output, $\beta_0 = 13.7, \beta_1=-0.00164$ and $\beta_2=-0.000174$. This means that if the height and prominence is 0, i.e. $x_1=x_2=0$, the odds of ascending the mountain successfully is $\exp(\beta_0) \approx 8.82 \cdot 10^5$. This is a very high odds, which makes sense. As a mountain with no height nor prominence has already been ascended, resulting in high odds. Now, when letting $x_1 \neq 0$ and $x_2$ fixed, the odds of successfully climbing a mountain decreases whenever we let $x_1$ increase by 1. More specifically, if we let the height of the mountain increase by 1, i.e. going from $x_1$ to $x_1+1$, the odds of climbing the 1 m lower mountain is multiplied with $\exp\beta_1 = \exp(-0.00164) = 0.9984$. In other words, it gets slightly harder to climb a taller mountain, since the odds is multiplied with a factor $<1$, so this makes sense. The same goes for $x_2$ and $\beta_2$. Letting $x_1$ be fixed and $x_2 \neq 0$, the odds of ascending a mountain decreases when the prominence increase. More specifically, when the prominence is increased by 1, i.e. going from $x_2$ to $x_2+1$, the previous odds of ascending a mountain 1 m lower is multiplied with $\exp \beta_2 = \exp(-0.000174) = 0.9998$. As can be seen, the increasing the height has more impact on the success rate of climbing the mountain than the prominence, as $\beta_1 < \beta_2$.
+
+
+\begin{align*}
+\frac{P(Y_i=1\mid x_{i1}+1)}{P(Y_i=0)\mid x_{i1}+1)}&=\exp(\beta_0)\cdot \exp(\beta_1 (x_{i1}+1))\cdots\exp(\beta_k x_{ik})\\
+&=\exp(\beta_0)\cdot \exp(\beta_1 x_{i1})\exp(\beta_1)\cdots\exp(\beta_k x_{ik})\\
+&=\frac{P(Y_i=1\mid x_{i1})}{P(Y_i=0\mid x_{i1})}\cdot \exp(\beta_1)\\
+\end{align*}
+
+More specifically, if we let the height of the mountain increase by 1, i.e. going from $x_1$ to $x_1+1$, the odds of climbing the 1 m lower mountain is multiplied with $\exp\beta_1 = \exp(-0.00164) = 0.9984$. In other words, it gets slightly harder to climb a taller mountain, since the odds is multiplied with a factor $<1$, so this makes sense. The same goes for $x_2$ and $\beta_2$. Letting $x_1$ be fixed and $x_2 \neq 0$, the odds of ascending a mountain decreases when the prominence increase. More specifically, when the prominence is increased by 1, i.e. going from $x_2$ to $x_2+1$, the previous odds of ascending a mountain 1 m lower is multiplied with $\exp \beta_2 = \exp(-0.000174) = 0.9998$. As can be seen, the increasing the height has more impact on the success rate of climbing the mountain than the prominence, as $\beta_1 < \beta_2$.
+
+When hypothesis testing whether a single model parameter $\beta_i = 0$ or not, the Wald test and the Z test are equivalent since the Wald statistic then becomes the Z statistic squared, which by definition is then $\chi^2$.
+According to the Wald, the `prominence` parameter is less significant than the others, as the $p$ value is higher than for the the intercept and height (0.000133 versus $<2 \cdot 10^{-16}$ for the other parameters). Nevertheless, they are all still highly significant, as the $p$ values are rather small.
+
+A $(1-\alpha)\cdot 100 \%$ confidence interval (CI) for a parameter $\beta_i$ is
+
+$$
+\left[ \hat{\beta}_{i,L}, \hat{\beta}_{i,H} \right] = \left[ \hat{\beta}_i-z_{\alpha/2} \sqrt{a_{ii}(\hat{\beta})}, \hat\beta_i + z_{\alpha/2} \sqrt{a_{ii}(\hat\beta) } \right],
+$$
+where $a_{ii}$ is the $i$th diagonal entry of the inverse of the expected Fisher information matrix $F(\beta)$. For the height parameter this CI becomes
+```{r}
+sds = sqrt(summary(model1)$cov.scaled[2,2])
+alpha = 0.05
+lower = model1$coefficients[2] - qnorm(1 - alpha/2) * sds
+upper = model1$coefficients[2] + qnorm(1 - alpha/2) * sds
+cbind(lower, upper)
+```
+
+As can be seen, a 95 % CI for the height parameter is $[\hat \beta_L, \hat \beta_H] = [-0.00191, -0.00136]$.
+
+A corresponding CI for $[\exp{\hat \beta_L}, \exp{\hat \beta_H}]$ is  $[0.9981,0.9986]$. This means that when the height, $x_1$, increases by 1, the odds of successfully climbing a 1 m taller mountain is, with 95 % certainty, multiplied with a factor lying in the interval $[0.9981,0.9986]$.   
+
+## c)
+The saturated model with one estimated parameter per data point is given by
+
+\begin{align}
+\tilde{\lambda}_i = y_i.
+\end{align}
+
+Combining this with the log-likelihood from equation \eqref{eq:loglik} we can express the deviance as
+
+\begin{align}
+D &= -2(\ell(\hat \lambda)-\ell(\tilde{\lambda})) \\
+&= 2 \sum_{i=1}^n \left(y_i(\ln y_i - \ln \hat{y}_i)-(y_i-\hat{y}_i)\right).
+\end{align}
+
+Since our candidate model includes an intercept the last term will cancel out (this follows directly from $s(\hat \beta ) = 0$). We can then write
+
+\begin{align}
+D=2\sum_{i=1}^n y_i \ln \frac{y_i}{\hat{y}_i} = \sum_{i=1}^n D_i,
+\end{align}
+
+The deviance residuals are then 
+
+\begin{align}
+d_i = \text{sign}(y_i-\hat{y}_i)\sqrt{D_i} =\text{sign}(y_i-\hat{y}_i)\sqrt{2\ln \frac{y_i}{\hat{y}_i}}
+\end{align}
+
+```{r dresheight, fig.cap="\\label{fig:dresheight} Deviance residuals as a function of height."}
+dres <- residuals(model1, type = "deviance")
+plotdf <- data.frame(dres = dres, fitted = model1$fitted.values,
+                     height=mount$height, prom = mount$prominence)
+ggplot(plotdf, aes(x=height, y=dres)) +geom_point() + labs(x ="Height", y="Deviance residuals" )
+```
+
+```{r dresprominence, fig.cap="\\label{fig:dresprom} Deviance residuals as a function of prominence."}
+ggplot(plotdf, aes(x=prom, y=dres)) +geom_point() + labs(x ="Prominence", y="Deviance residuals" )
+```
+
+```{r dresiduals, fig.cap="\\label{fig:dresiduals} Deviance residuals as a function of the fitted value."}
+ggplot(plotdf, aes(x=fitted, y=dres)) +geom_point() + labs(x ="Fitted values", y="Deviance residuals" )
+```
+
+```{r dresqq, fig.cap="\\label{fig:dresqq} A normal Q-Q plot comparing the deviance residuals to a standard normal distribution. "}
+qqnorm(dres,main=" ")
+qqline(dres,col = 2)
+```
+
+In figures \ref{fig:dresheight} and \ref{fig:dresprom} the deviance residuals are plotted vs `height` and `prominence`, respectively.
+There is no obvious trend in either of the plots.
+The deviance residuals seem to have mean and variance independent of each covariate.
+When the deviance residuals are plotted as a function of the fitted values in figure \ref{fig:dresiduals} it becomes harder to gauge, but it does seem like the deviance residuals have higher variance for the highest fitted values.
+The Q-Q plot in figure \ref{fig:dresqq} indicates that the deviance residuals are reasonably close to being normally distributed.
+Asymptotically, under the hypothesis that we have a good model, the deviance residuals should follow a standard normal distribution, but our observed sample variance is $3.634$.
+In other words it is a good idea to test that hypothesis.
+
+From Wilks' theorem we have $D \sim \chi^2_{n-p}$.
+In our case the model deviance is found to be $414.68$, which is much higher than the $110$ degrees of freedom.
+The likelihood of such an extreme deviance for a good model is found to be $0$.
+
+```{r modeldeviance}
+D <- deviance(model1)
+n <- dim(mount)[1]
+p <- length(model1$coefficients)
+1-pchisq(D,df=n-p)
+```
+
+In other words we are forced to reject the hypothesis that the model fits the data well.
+
+The following code produces a plot of our model's fitted value for the probability of a successful ascent as a function of `height` and `prominence`.
+
+```{r probplot,fig.cap="\\label{fig:probabilities} The probability of a successful ascent as a function of both height and prominence."}
+steps <- 100
+
+hmin <- min(plotdf$height)
+hmax <- max(plotdf$height)
+heights <- seq(hmin,hmax, length.out=steps)
+
+pmin <- min(plotdf$prom)
+pmax <- max(plotdf$prom)
+proms <- seq(pmin,pmax,length.out=steps)
+
+prob <- function(height, prom, model){
+  eta <- c(1,height,prom)%*%model$coefficients
+  res <- exp(eta)/(1+exp(eta))
+  return(res)
+}
+
+probs <- c()
+pcoord <- c()
+hcoord <- c()
+for (i in 1:steps){
+  for (j in 1:steps){
+    probs <- append(probs, prob(heights[i],proms[j],model1))
+    hcoord <- append(hcoord,heights[i])
+    pcoord <- append(pcoord,proms[j])
+  }
+}
+
+probsdf <- data.frame(prob=probs, he=hcoord, pr=pcoord)
+ggplot(data = probsdf, aes(x=he, y=pr)) + geom_raster(aes(fill=prob)) + scale_fill_gradientn(colours = terrain.colors(10)) +labs(x="Height",y="Prominence",z="Probability") 
+```
+
+Figure \ref{fig:probabilities} shows how the probability of a successful ascent depends on both covariates.
+According to the model the probability decreases monotonously with both `height` and `prominence`, and it is possible to compensate an increase in one covariate by decreasing the other.
+As expected the model predicts probabilities close to zero as both covariates increase and close to one as both decrease.
+
+## d)
+
+When calculating the probability of successfully climbing Mount Everest, with height and prominence 8848 m, i.e. $x_1=x_2=8848$, the linear predictor can be found by
+
+$$
+\eta_\text{Mount Everest}=\beta_0+\beta_1 \cdot 8848 + \beta_2 \cdot 8848,
+$$
+which is equal to 
+```{r}
+eta = model1$coefficients[1]+model1$coefficients[2]*8848+model1$coefficients[3]*8848
+eta
+```
+
+Then the probability of climbing the mountain can be calculated by
+
+\begin{equation}
+\label{pi}
+\pi_\text{Mount Everest} = \frac{\exp (\eta_\text{Mount Everest})}{1 + \exp(\eta_\text{Mount Everest})},
+\end{equation}
+
+which is equal to 
+
+```{r}
+prob = exp(eta)/(1+exp(eta))
+prob
+```
+
+That is, there is a probability of $8.9 \%$ to successfully climb Mount Everest.
+Using the fact that the asymptotic distribution of the $\hat \beta \sim N_p \left(\mathbf{\beta}, F^{-1}(\mathbf{\hat\beta} ) \right)$, $\eta_i = \mathbf{x_i}^\top \mathbf{\beta}$ is a linear combination of normally distributed variables and is then normally distributed. The mean is $\mathbf{x_i}^\top \mathbf{\beta}$ and the variance is $\text{Cov}(\mathbf{x}_i^\top \mathbf{\beta}) = \mathbf{x}_i^\top \text{Cov}(\beta) \mathbf{x}_i$. With  $\mathbf{x}_\text{Mount Everest} =\left[1, 8848, 8848 \right]^\top$ the variance and standard deviation then becomes
+
+```{r}
+covbeta = vcov(model1)
+xvec = c(1,8848,8848)
+etavar = t(xvec)%*%covbeta%*%xvec
+print("Variance")
+etavar
+etasdev = sqrt(etavar)
+print("Standard deviation")
+etasdev
+```
+Then the $95 \%$ CI of the linear predictor can be calculated as
+
+$$
+\left[\eta_L, \eta_U \right] = \left[ \eta_\text{Mount Everest} - z_{0.025} \cdot \sigma_\eta, \eta_\text{Mount Everest} + z_{0.025} \cdot \sigma_\eta \right]
+$$
+which is equal to 
+
+```{r}
+lower = eta - qnorm(0.975)*etasdev
+upper = eta + qnorm(0.975)*etasdev
+print("Lower limit")
+lower
+print("Upper limit")
+upper
+```
+So a $95 \%$ CI for the linear predictor for climbing Mount Everest is given by $\left[-2.846,-1.801 \right]$. A corresponding CI for the probability of climbing Mount Everest can then be calculated by using the formula $\pi = \exp(\eta)/(1+\exp(\eta))$. Inserting the values for $\eta_L$ and $\eta_U$ to get the lower and upper limit of the probability one can calculate the $95 \%$ CI for the probability of ascending Mount Everest as
+
+$$
+\left[\pi_L,\pi_U \right] = \left[\frac{\exp(\eta_L)}{1+\exp(\eta_L)} , \frac{\exp(\eta_U)}{1+\exp(\eta_U)}\right]
+$$
+where the numerical values are
+```{r}
+plower = exp(lower)/(1+exp(lower))
+pupper = exp(upper)/(1+exp(upper))
+print("Lower limit")
+plower
+print("Upper limit")
+pupper
+```
+So the $95 \%$ CI of the probability of climbing Mount Everest is $[0.0549, 0.142]$. In other words, one can say with $95 \%$ confidence that between $5.49 \%$ and $14.2 \%$ of those who attempt to climb the mountain succeed in doing so, based on this model.
+From the Wikipedia page there has been 145 ascents and 121 failed attempts of climbing the mountain, so based on this it should be a probability of $\frac{145}{145+121} \approx 0.545$ to successfully climb it. This is much higher than the upper limit of the probability of ascending the mountain based on the model, so the model is rather pessimistic. Based on this, the model is not very reasonable.
+A possible reason for the seemingly poor performance is Mount Everests very high prominence, which is unprecedented within our dataset.
+
+As for Chogolisa, with height $x_1=7665$ and prominence $x_2 = 1624$ we get that the linear predictor $\eta_\text{Chogolisa}$ is
+
+```{r}
+etachog = model1$coefficients[1] + model1$coefficients[2]*7665+model1$coefficients[3]*1624
+etachog
+```
+
+Then the probability of successfully climbing Chogolisa is, using \eqref{pi},
+```{r}
+exp(etachog)/(1+exp(etachog))
+```
+That is, there is a $70 \%$ probability of successfully climb Chogolisa. Calculating the $95 \%$ CI for $\eta_\text{Chogolisa}$:
+
+```{r}
+xvecchog = c(1, 7665,1624)
+etachogvar = t(xvecchog)%*%covbeta%*%xvecchog
+etachogsd = sqrt(etachogvar)
+```
+
+Then the $95 \%$ CI for $\eta_\text{Chogolisa}$ is
+
+```{r}
+letachog = etachog - qnorm(0.975)*etachogsd
+print("Lower limit")
+letachog
+
+uetachog = etachog + qnorm(0.975)*etachogsd
+print("Upper limit")
+uetachog
+```
+That is, a $95 \%$ CI for the linear predictor is then $[0.769,0.967]$. Using \eqref{pi} the $95 \%$ CI for the probability of climbing Chogolisa is
+
+```{r}
+print("Lower limit")
+exp(letachog)/(1+exp(letachog))
+print("Upper limit")
+exp(uetachog)/(1+exp(uetachog))
+```
+So a $95 \%$ CI for the probability of successfully climbing Chogolisa is $[0.683,0.725]$.
+The data from Chogolisa gives a much more optimistic estimate.
+The dataset contains many mountains with height and prominence comparable to Chogolisa.
+Some of these mountains even have similar numbers of fails and successes.
+It is not totally unexpected that a model with poor fit, according to the model deviance, may also predict unreliably.
+
+# Part 2: Poisson regression
+
+```{r tippeligaen}
+filepath <- "https://www.math.ntnu.no/emner/TMA4315/2018h/eliteserien2018"
+tippeliga <- read.table(file = filepath, header = TRUE,
+                        colClasses = c("character", "character", "numeric", "numeric"))
+head(tippeliga)
+```
+```{r dataplot}
+library(GGally)
+#ggpairs(tippeliga)
+```
+
+The loglikelihood for Poisson regression is
+
+\begin{align}
+\ell(\beta) &= \ln \prod_{i=1}^n \frac{\lambda_i^{y_i}}{y_i!} e^{-\lambda_i} \\
+            &= \sum_{i=1}^n\left[y_i \ln(\lambda_i) - \ln(y_i!) - \lambda_i\right]
+\end{align}
+
+```{r myglm}
+source('myglm.R')
+```
+
+## a)
+
+The Pearson $\chi^2$-test is used to test goodness of fit, homogeneity and independece of some data. In this case a test for independence via a contingency table is necessary, as independence between the goals of the home and the away team is questionable. It seems natural that if the away team has more goals the home team would have less due to an intuitive correlation with ball possession, which is a zero sum game. However the probability for goals may be more related to the difference in power of the two teams. 
+
+To test the null hypothesis of independence we compare the observed frequency for each combination of home and away goals scored, with the theoretical frequency.
+The theoretical frequency, given the hypothesis of independence, is
+
+\begin{equation}
+E_{i,j} = N p_{i\cdot} p_{\cdot j}
+\end{equation}
+
+where $N$ is the total number of games, $p_{i\cdot}$ is the fraction of games where the goals scored by the home team were of category $i$, and $p_{\cdot j}$ corresponds to the away team.
+The fractions are easily found from the observations $O_{i,j}$ by
+
+\begin{equation}
+p_{i\cdot} = \sum_{j}\frac{O_{i,j}}{N}
+\end{equation}
+
+The test-statistic is then given by
+
+\begin{equation}
+\chi^2 = \sum_i \sum_j \frac{(O_{i,j}-E_{i,j})^2}{N}
+\end{equation}
+```{r contingencytable}
+otable <- table(tippeliga$yh,tippeliga$ya)
+ctable <- otable[1:5,1:5]
+ctable[,5] <- ctable[,5] + otable[1:5,6]
+ctable[5,] <- ctable[5,] + otable[6,1:5]
+ctable
+chisq.test(ctable)
+```
+
+Note that the $\chi^2$ test ends up being on 16 degrees of freedom.
+This is because we consider 4, 5 or 6 goals to be of the same category, namely 4+ goals.
+This is done to avoid having too many low frequencies in our table, since low expected counts give large contributions the the total value of the test statistic.
+The test gives a p-value of 0.5871, which means we do not have sufficient evidence to reject the assumption of independence.
+
+## b)
+
+The preliminary rankings as of the 1st of October are easily determined from the match data.
+
+```{r prelimrank}
+prelim <- data.frame(team = unique(tippeliga$home), points = rep(0,16), goaldiff = rep(0,16))
+for (i in 1:length(tippeliga[,1])){
+  goaldiff <- tippeliga$yh[i] - tippeliga$ya[i]
+  prelim[prelim$team==tippeliga$home[i],]$goaldiff <- prelim[prelim$team==tippeliga$home[i],]$goaldiff + goaldiff
+  
+  prelim[prelim$team==tippeliga$away[i],]$goaldiff <- prelim[prelim$team==tippeliga$away[i],]$goaldiff - goaldiff
+  if (goaldiff > 0){
+    prelim[prelim$team==tippeliga$home[i],]$points <- prelim[prelim$team==tippeliga$home[i],]$points + 3
+  }else if(goaldiff <0){
+    prelim[prelim$team==tippeliga$away[i],]$points <- prelim[prelim$team==tippeliga$away[i],]$points + 3
+  }else{
+    prelim[prelim$team==tippeliga$home[i],]$points <- prelim[prelim$team==tippeliga$home[i],]$points + 1
+    prelim[prelim$team==tippeliga$away[i],]$points <- prelim[prelim$team==tippeliga$away[i],]$points + 1
+  }
+}
+prelim[order(-prelim$points,-prelim$goaldiff),]
+```
+
+## c)
+
+```{r useglm, warning=FALSE}
+
+```
+
+```{r designmatrix, warning=FALSE}
+X <- matrix(0,nrow=384, ncol=18)
+goals <- vector(length = 384)
+
+X[,1] <- rep(1,384)
+X[,2] <- rep(c(1,0),192)
+teams <- tippeliga$home[order(unique(tippeliga$home))]
+colnames(X) <- c("intercept","homeadvantage",teams)
+
+for (i in 1:length(tippeliga[,1])) {
+  home <- tippeliga$home[i]
+  away <- tippeliga$away[i]
+  # Home team
+  X[2*i-1, home] <- 1
+  X[2*i-1, away] <- -1
+  # Away team
+  X[2*i, home] <- -1
+  X[2*i, away] <- 1
+  # Goals
+  goals[2*i-1] <- tippeliga$yh[i]
+  goals[2*i] <- tippeliga$ya[i]
+}
+X <- X[,c(1:2,4:18)] # remove linear dependency
+model2b <- myglm(goals ~ -1 + X, data = tippeliga)
+model2b$coefficients
+model2glm <- glm(goals ~ -1 + X, family = "poisson")
+summary(model2glm)
+```
+```{r ranking}
+str=c(0,unname(model2b$coefficients[3:17]))
+ranking <- data.frame(team = teams, strength=str,multiplier=exp(str))
+ranking[order(-ranking$strength),]
+```
+
+This strength based ranking agrees well with the preliminary ranking found above.
+Some notable differences are the second and third place teams switching place, Ranheim dropping from 6th all the way to 11th place and Stroemsgodset moving from 12th up to 8th.
+It seems like teams with high goal difference compared to their neighbours in the preliminary ranking tend to be higher on the strength based ranking.
+In fact, the strength based ranking agrees even better with the preliminary ranking sorted by goal differences instead of points.
+This makes sense as winning (losing) matches by multiple goals results in a higher (lower) strength parameter, but does not give (cost) additional points.
+The differences in order between the strength based ranking and the goal differences are due to the model accounting for whether teams score (or are scored against) versus good or bad teams.
+All in all, the strength based ranking indicates that our quite simple model is somewhat sensible.
+
+## d)
+
+The codechunk below simulates all 240 matches in the season 1000 times, using our model.
+The final ranking for each season is saved in the file `seasons.RData`.
+
+```{r simulation, eval=FALSE}
+# calculate both goal rates for all possible matches
+goalrates <- data.frame(hometeam=rep(0,240),awayteam=rep(0,240),rh=rep(0,240),ra<-rep(0,240))
+intercept <- model2b$coefficients[1]
+homeadv <- model2b$coefficients[2]
+for (i in 1:16){
+  for (j in 1:15){
+    if (j>=i){
+      s <- j+1
+    }else{
+      s <- j
+    }
+    k <- 15*(i-1)+j
+    goalrates[k,1] <- i
+    goalrates[k,2] <- s
+    goalrates[k,3] <- exp(homeadv + intercept+str[i]-str[s])
+    goalrates[k,4] <- exp(intercept + str[s]-str[i])
+  }
+}
+
+#simulate seasons
+seasons <- list()
+simulations <- 1000
+season <- data.frame(team = teams, points = rep(0,16), goaldiff = rep(0,16))
+pointtables <- rep(list(season),simulations)
+
+for (i in 1:240) {
+  cat("Simulating Match", i, "for", simulations, "seasons.\n")
+  yh <- rpois(simulations, goalrates[i,3])
+  ya <- rpois(simulations,goalrates[i,4])
+  gdif <- yh - ya
+  winners <- sign(gdif)
+  for(j in 1:simulations) {
+    homeTeamBool <- pointtables[[j]]$team == teams[goalrates[i,1]]
+    awayTeamBool <- pointtables[[j]]$team == teams[goalrates[i,2]]
+    pointsH <- pointtables[[j]][homeTeamBool,]$points
+    pointsA <- pointtables[[j]][awayTeamBool,]$points
+    gdifH <- pointtables[[j]][homeTeamBool,]$goaldiff
+    gdifA <-pointtables[[j]][awayTeamBool,]$goaldiff 
+    pointtables[[j]][homeTeamBool,]$goaldiff <- gdifH + gdif[j]
+    pointtables[[j]][awayTeamBool,]$goaldiff <- gdifA - gdif[j]
+    if (winners[j] == -1) {
+      # Away wins
+      pointtables[[j]][awayTeamBool,]$points <- pointsA + 3
+    } else if (winners[j] == 0) {
+      # Tie
+      pointtables[[j]][homeTeamBool,]$points <- pointsH + 1
+      pointtables[[j]][awayTeamBool,]$points <- pointsA + 1
+    } else {
+      # Home wins
+      pointtables[[j]][homeTeamBool,]$points <- pointsH + 3
+    }
+  }
+}
+list.save(pointtables,file="seasons.RData")
+```
+
+```{r results}
+pointtables <- list.load("seasons.RData")
+simulations <- length(pointtables)
+seasonvector <- vector()
+
+for (i in 1:simulations){
+  seasonvector <- c(seasonvector,rep(i,16))
+}
+results <- data.frame(team = rep(teams,simulations), season = seasonvector, rank = rep(0,16*simulations))
+rank <- vector()
+for (i in 1:simulations){
+  order <- order(-pointtables[[i]]$points,-pointtables[[i]]$goaldiff)
+  seasonrank <- vector()
+  for (j in 1:16){
+    seasonrank <- c(seasonrank,match(j,order))
+  }
+  rank <- c(rank,seasonrank)
+}
+results$rank <- rank
+
+placements <- matrix(0,nrow=simulations,ncol=16)
+colnames(placements) <- teams
+for (i in 1 :16){
+  placements[,i] <- results[results$team==teams[i],]$rank
+}
+placementdf <- cbind(1:1000,data.frame(placements))
+pf <- melt(placementdf, id="1:1000")
+point.mean <- rep(0,16)
+for (i in 1:16){
+  for (j in 1:1000){
+    point.mean[i] <- point.mean[i]+pointtables[[j]][i,2]
+  }
+  point.mean[i] <- point.mean[i]/simulations
+}
+meandf <- ddply(pf, "variable", summarise, placement.mean=mean(value))
+meandf <- cbind(meandf,data.frame(point.mean = point.mean))
+meandf[order(meandf$placement.mean),]
+```
+The table above ranks the teams by their mean placement in our simulations.
+This ranking is in perfect agreement with our strength ranking, which is to be expected when simulating the entire season.
+It would likely not be the case when only the remaining season is simulated.
+It is worth noting that Ranheim has a higher point mean than Kristiansund, despite placing slightly worse on average.
+The difference is small, and is more than likely due to chance.
+
+In figure \ref{fig:histogram} the final rank for each team is visualized using histograms. 
+The mean result for each team is indicated by a red dotted line.
+
+```{r histogram, fig.cap="\\label{fig:histogram} A visualization of each teams placements over 1000 simulated seasons."}
+ggplot(pf,aes(x=value))+geom_histogram(binwidth=0.5) + labs(x="Placements") + geom_vline(data=meandf, aes(xintercept=placement.mean, colour="red"), linetype="dashed", size=.5,show.legend=FALSE) +
+facet_wrap(~variable, scales = "free_y")
+```
+
+The plots agree with the preliminary rankings, in that the top and bottom teams more or less does not change.
+Rosenborg, Molde and Brann are still the top contenders,  with mean placements approximately 2, 3 and 4, respectively.
+Rosenborg wins 541 of the 1000 simulations.
+Sandefjord, Start and Stabaek are still the bottom three teams, with mean placements appoximately 15, 14, 13, respectively.
+Sandefjord finishes last in 503 of the simulations.
+
+
+```{r winloss}
+win <- rep(0,16)
+lose <- rep(0,16)
+variance <- rep(0,16)
+for(i in 1:16){
+  win[i] <- count(placements[,i]==1)[2,2]/1000
+  lose[i] <- count(placements[,i]==16)[2,2]/1000
+  variance[i] <- var(placements[,i])
+}
+winloss <- data.frame(team=teams,win=win, lose=lose, var = variance)
+winloss
+```
+
+The proportion each team finishes first or last is shown in the table above, along with the variance of the team's placements.
+The teams at the very top do not lose any of the simulated seasons, with the exception of Brann who loses once.
+Their variance is also quite low, meaning that the model is fairly sure of their placement.
+Likewise, the bottom teams do not win any of the simulated seasons, and like the top teams they also have low variance.
+Most teams end up somewhere in the middle.
+These teams are represented at all possible placements over the 1000 simulated seasons, and thus their variance is fairly high.
+It is worth noting that only Rosenborg, Molde and Sandefjord have strengths significantly different from that of BodoeGlimt at level $0.1$.
+Therefore one should not read too much into the results for the remaining teams.
+
+# Source code
+## myglm.R
+```{r source, code=readLines('myglm.R')}
+
+```
