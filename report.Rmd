@@ -19,28 +19,36 @@ library(rlist)
 library(reshape2)
 library(plyr)
 library(GGally)
+
+my_dens <- function(data, mapping, ...) {
+  ggplot(data = data, mapping=mapping) +
+    geom_density(..., alpha = 1, fill = NA) 
+}
+
 ```
 
 
 # a)
 ```{r}
 dataset <- read.table("https://www.math.ntnu.no/emner/TMA4315/2018h/jsp2.txt", header = TRUE)
-ggpairs(data = dataset, mapping = aes(col = gender), columns = c("social", "raven", "math"), legend = 1)
+ggpairs(data = dataset, mapping = aes(col = gender, alpha=0.7), columns = c("social", "raven", "math"), legend = 1)
 ```
 From the plot it can be seen from the top and bottom right panel that girls have higher average maths scores than boys. This is because the mean of the blue box plots in the top right panel (corresponding to the girls' maths scores) are higher than that of the boys' (red boxes). However, as 0 is included in all the box plots, the difference is not too big. The same conclusion can be drawn from the bottom right panel; here the distribution of the girls' maths scores have a peak slightly more to the right than that of the boys.  
+
+The middle section shows that the gender differences are small for the raven tests. However mostly there are few differences between the different social class. 
 
 Fitting a linear model with math as response and raven and gender as covariates:
 ```{r}
 model = lm(math ~ raven + gender, data = dataset)
-model
+summary(model)
 ```
 The model for the $k$th student is thus
 
 $$
 Y_k={\bf x}_k \pmb{\beta} + \varepsilon_k,
 $$
-where the $\varepsilon_k$s are independent, have mean 0 and variance $\sigma^2$. Here the $Y_k$ is the response, $\bf x_k$ are the covariates, $\varepsilon_k$ are the residuals and $\pmb{\beta}$ the parameter estimates.
-Here the parameter estimates are $\beta_0 = -1.313$,  $\beta_{\mathrm{raven}} = 0.1965$ and $\beta_{\mathrm{gendergirl}} = 2.538$. This means that being a girl has a positive impact on the maths test score, and a positive raven test score also gives a positive impact on the maths test score. Here $\beta_0$, i. e. the intercept, corresponds to the parameter estimate for a boy. 
+where the $\varepsilon_k$s are independent, have mean 0 and variance $\sigma^2$. Here the $Y_k$ is the response, $\bf x_k$ are the covariates, $\varepsilon_k$ are the errors and $\pmb{\beta}$ the fixed effects parameters.
+Here the parameter estimates are $\hat\beta_0 = -1.313$,  $\hat\beta_{\mathrm{raven}} = 0.1965$ and $\hat\beta_{\mathrm{gendergirl}} = 2.538$. This means that being a girl has a positive impact on the maths test score, and a positive raven test score also gives a positive impact on the maths test score. Here $\hat\beta_0$, i. e. the intercept, corresponds to the parameter estimate for a boy. 
 By looking at the $p$ values of the parameter estimates, all of them are highly significant. 
 In this model we are investigating if there is a linear relationship between maths test score and raven test score and gender, and we are assuming that the maths test score does not depend on social status and which school the student comes from.
 
