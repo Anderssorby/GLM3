@@ -58,12 +58,43 @@ Now a random intercept model with math as response and raven and gender as covar
 $$
 {\bf Y}_{i} = {\bf X}_i\beta + {\bf 1} \gamma_{0i} + \varepsilon_{i}
 $$
-As before $\bf Y_i$ is the response, $\bf X$ the covariates, $\beta$ the fixed effects (and $\beta_0$ the fixed population intercept), $\gamma_{0i}$ the deviation (for members of cluster i) from the population intercept $\beta_0$.
+As before $\bf Y_i$ is the response, $\bf X_i$ the covariates, $\beta$ the fixed effects (and $\beta_0$ the fixed population intercept), $\gamma_{0i}$ the deviation (for members of cluster $i$) from the population intercept $\beta_0$.
+The response, $\bf Y_i$, is a $n_i\times 1$ vector, where $n_i$ is the number of observations from cluster $i$.
+Each student has its own row in the matrix $\bf X_i$.
+Each row contains an intercept and 2 covariates, making it an $n_i \times 3$ matrix, and $\beta$ a $3 \times 1$ vector.
+The vector ${\bf 1}$ is a $n_i\times 1$ vector consisting of only 1's, and realizations of the random variable $\gamma_{0i}$ are scalars.
+Lastly $\varepsilon_{i}$ has the same dimensions as $Y_i$, that is $n_i\times 1$.
+In our case this means the number of students from school $i$.
+We assume that $\gamma_{0i} \sim \mathcal{N}(0,\tau_0^2)$ and $\varepsilon_{i} \sim \mathcal{N}_{n_i}(0,\sigma^2I)$.
+It is also assumed that the $\gamma_{0i}$ are independent, and also independent from all the $\varepsilon_{i}$ vectors.
+We also assume that the responses at school $i$ and $k$ are independent.
+
 ```{r}
 library(lme4)
 fitRI1 <- lmer(math ~ raven + gender + (1 | school), data = dataset)
 summary(fitRI1)
 ```
+The estimates for this model are more or less in agreement with those of the previous one.
+Girls and those who do well on the raven test are still expected to do better on the math test.
+The model predicts girls to score 2.511 points higher on the test than boys, and a student who scores 1 point higher on the raven test is predicted to score 0.214 points higher on the math test.
+The new model estimates the effect from a good raven test to be slightly higher (0.214 vs 0.197), and the effect of gender to be slightly lower (2.511 vs 2.538).
+
+The p-values are omitted from the printout because the common assumptions used to compute p-values does not hold in this model. There are no analytical results for the null distribution of parameter estimates in complex situations for mixed models. The null distribution is the distribution of the test statistic when the null hypothesis is true. In general the parameter estimates are not t-distributed for finite size samples though it holds asymptotically.
+
+We can test the siginificance of the $\beta_{raven}$ parameter by doing a hypothesis test $H_0: \beta_{raven} = 0$ against $H_1:\beta_{raven} \neq 0$. This can be done with a Wald-test which in this case reduces to a Z-test. 
+```{r }
+pvalue <- 2*(1-pnorm(abs(9.197)))
+pvalue
+```
+The t-value for raven is rather big so the following pvalue is very small. We are forced to reject the null hypothesis. 
+
+Also we can compute a $(1-\alpha)\cdot100\% = 95\%$-confidence interval for the effect of female gender on math score. 
+\begin{align*}
+\text{CI}_{j} &= \left[\hat\beta_{j} - \Phi^{-1}(1-\alpha/2)\cdot \widehat{SD}(\hat\beta_{j}),\  \hat\beta_{j} + \Phi^{-1}(1-\alpha/2)\cdot \widehat{SD}(\hat\beta_{j}) \right] \\
+&= [2.51119 - 1.96\cdot 0.26684 , 2.51119 + 1.96\cdot 0.26684  ] \\
+&= [1.988184, 3.034196]
+\end{align*}
+
 # c)
 # d)
 # e)
