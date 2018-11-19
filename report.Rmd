@@ -15,13 +15,14 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("rlist")
 #install.packages("lme4")
 #install.packages("sjPlot")
+#install.packages("ggpubr")
 library(ggplot2)
 library(rlist)
 library(reshape2)
 library(plyr)
 library(GGally)
-#library(sjPlot)
-#library(ggpubr)
+library(sjPlot)
+library(ggpubr)
 
 my_dens <- function(data, mapping, ...) {
   ggplot(data = data, mapping=mapping) +
@@ -137,7 +138,7 @@ where in our model $U_i=\mathbf 1$ and $\mathbf Q=\tau_0^2$. Then for our model 
 \end{equation}
 where $e_i=\frac{1}{n_i} \sum_{j=1}^{n_i} (Y_{ij}-{\bf x}_{ij}^T\hat{{\boldsymbol \beta}})$ is the average residual. 
 
-```{r plots-c, eval=FALSE, echo=FALSE}
+```{r plots-c1}
 gg1 <- plot_model(fitRI2, type = "diag", prnt.plot = FALSE, geom.size = 1)
 gg2 <- plot_model(fitRI2, type = "re", sort.est = "(Intercept)", y.offset = 0.4, dot.size = 1.5) +
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) + 
@@ -155,6 +156,17 @@ gg5 <- ggplot(df, aes(sample=resid)) + stat_qq(pch = 19) +
   labs(x = "Theoretical quantiles", y = "Standardized residuals", title = "Normal Q-Q")
 
 gg1[[2]]$school + ggtitle("QQ-plot of random intercepts")
+ggarrange(gg2, gg3, gg4, gg5)
+```
+
+```{r plots-c2}
+df <- data.frame(x = rep(range(dataset$raven), each = 49),
+                 y = coef(fitRI2)$school[,1] + coef(fitRI2)$school[,2] * rep(range(dataset$raven), each = 49),
+                 School = factor(rep(c(1:42, 44:50), times = 2)))
+```
+
+```{r plots-c3, fig.cap="Random intercept realization for each school.\\label{fig:rir}"}
+ggplot(df, aes(x = x, y = y, col = School)) + geom_line() + labs(x = "raven score", y = "math score")
 ```
 
 The QQ-plot of random intercepts is used to check the normal assumption of the $\gamma_i$’s. In this plot the quantiles agree fairly well, as the points more or less correspond to a straight line. Here there is an outlier in the bottom left corner. 
@@ -168,9 +180,41 @@ The plot named “Residuals vs. Fitted values” is used to check if there is a 
 
 The normal QQ plot checks the normality assumption of the standardised residuals. Ideally the points should follow the dashed line. Here the quantiles agree, as the points lie more or less on the dashed line.
 
+The final plot \ref{fig:rir} shows the baseline effect for math score of each school. It shows that there is a distribution between the schools that is affecting the scores and how we model this using a random intercept. 
+
 # d)
 
 
 
+```{r model-d}
+fitRI3 <- lmer(math ~ raven + social + (1 | school), data = dataset)
+anova(fitRI2, fitRI3)
+```
+
+We are not using REML estimation for the parameters of when doing the ANOVA test. This is because it would otherwise break the assumption of nested models. <!--Er vi helt sikre på dette?-->|
+
+```{r model-d2}
+fitRIS <- lmer(math ~ raven + (1 + raven | school), data = dataset)
+summary(fitRIS)
+```
+Given this ANOVA test we conclude that the model including the social status of the father is slightly better. This is given a significance level $\alpha= 0.05\geq \text{p-value}$. The AIC for this model is also slightly lower than the one without the social covariate. This points in the direction of selecting this model. However the BIC is larger, which is natural because the penalty term for parameters is larger. We choose to rely on the AIC and the likelihood ratio test to select model.
+
+```{r plots-d}
+df <- data.frame(x = rep(range(dataset$raven), each = 49),
+                 y = coef(fitRIS)$school[,1] + coef(fitRIS)$school[,2] * rep(range(dataset$raven), each = 49),
+                 School = factor(rep(c(1:42, 44:50), times = 2)))
+gg1 <- ggplot(df, aes(x = x, y = y, col = School)) + geom_line()
+
+gg2 <- plot_model(fitRIS, type = "re", sort.est = "(Intercept)", y.offset = 0.4, dot.size = 1.5) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) + labs(title = "Random intercept (RI)")
+
+ggarrange(gg1, gg2, ncol = 2, legend = FALSE)
+```
+
+The random intercept and slope model we have fitted has formula
+
+\begin{equation}
+
+\end{equation}
 # e)
 
