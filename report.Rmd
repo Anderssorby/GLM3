@@ -214,7 +214,10 @@ ggarrange(gg1, gg2, ncol = 2, legend = FALSE)
 The random intercept and slope model we have fitted has formula
 
 \begin{equation}
-
+\hat{\beta}_0+\hat{\beta}_1\text{raven}+\hat{\gamma}_{i0}+\hat{\gamma}_{1i}\text{raven}
 \end{equation}
+
+We see from the model that there is a correlation between the random intercept and the random slope
+
 # e)
 
