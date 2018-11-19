@@ -14,11 +14,14 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("GGally")
 #install.packages("rlist")
 #install.packages("lme4")
+#install.packages("sjPlot")
 library(ggplot2)
 library(rlist)
 library(reshape2)
 library(plyr)
 library(GGally)
+#library(sjPlot)
+#library(ggpubr)
 
 my_dens <- function(data, mapping, ...) {
   ggplot(data = data, mapping=mapping) +
@@ -96,6 +99,78 @@ Also we can compute a $(1-\alpha)\cdot100\% = 95\%$-confidence interval for the 
 \end{align*}
 
 # c)
+
+We will now consider a model without the gender covariate.
+
+```{r }
+fitRI2 <- lmer(math ~ raven + (1 | school), data = dataset)
+summary(fitRI2)
+```
+
+The intra class covariance between $Y_{ij}$ and $Y_{il}$ is
+\begin{equation}
+\text{Cov}({\bf Y}_i)=\tau_0^2 \mathbf{11}^T + \sigma^2 \mathbf{I}
+\end{equation}
+with correlation
+\begin{equation}
+\text{Corr}(Y_{ij},Y_{il})=\frac{\text{Cov}(Y_{ij},Y_{il})}{\sqrt{\text{Var}(Y_{ij})\text{Var}(Y_{il})}}=\frac{\tau_0^2}{\tau_0^2+\sigma^2} \text{ for }j\neq l.
+\end{equation}
+
+From the summary of the model we get $\hat\sigma^2=20.711$ and $\hat\tau_0^2=4.002$ which means that $\text{Corr}(Y_{ij},Y_{il}) = 0.1619$. This correlation is rather low. The variance between different students has far more to say than the variation between schools which makes sense. However there is still a noticable effect of different schools.
+
+In general we can consider a joint distribution of $Y$ and $\gamma \sim N(0,G)$
+\begin{equation}
+\begin{pmatrix} {\bf Y}\\ {\boldsymbol \gamma} \end{pmatrix} \sim
+N(\begin{pmatrix} {\bf X}{\boldsymbol \beta} \\ {\bf 0}\end{pmatrix},
+\begin{pmatrix}{\bf V}={\bf U}{\bf G}{\bf U}^T+\sigma^2{\bf I} & {\bf U}{\bf G}\\
+{\bf G}{\bf U}^T & {\bf G}\end{pmatrix})
+\end{equation}
+where $G$ is a block diagonal matrix of $Q$ which is the covariance matrix of $\gamma_i$. $U$ is a design matrix for random effects similar to $X$ for fixed effects.
+
+We can estimate the random intercept as follows
+\begin{equation}
+\hat{{\boldsymbol \gamma}}_i=\hat{\bf Q}{\bf U}_i^T\hat{\bf V}_i^{-1}({\bf Y}_i-{\bf X}_i\hat{{\boldsymbol \beta}})
+\end{equation}
+where in our model $U_i=\mathbf 1$ and $\mathbf Q=\tau_0^2$. Then for our model it reduces to
+\begin{equation}
+\hat{\gamma}_{0i}=\frac{n_i \hat{\tau}_{0}^2}{\hat{\sigma}^2+n_i \hat{\tau}_{0}^2}e_i
+\end{equation}
+where $e_i=\frac{1}{n_i} \sum_{j=1}^{n_i} (Y_{ij}-{\bf x}_{ij}^T\hat{{\boldsymbol \beta}})$ is the average residual. 
+
+```{r plots-c, eval=FALSE, echo=FALSE}
+gg1 <- plot_model(fitRI2, type = "diag", prnt.plot = FALSE, geom.size = 1)
+gg2 <- plot_model(fitRI2, type = "re", sort.est = "(Intercept)", y.offset = 0.4, dot.size = 1.5) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) + 
+  labs(title = "Random intercept (RI)", x = "school", y = "math")
+gg3 <- ggplot(data = data.frame(x = ranef(fitRI2)$school[[1]]), aes(x = x)) + geom_density() + 
+  labs(x = "math", y = "density", title = "Density of RI") +
+  stat_function(fun = dnorm, args = list(mean = 0, sd = attr(VarCorr(fitRI2)$school, "stddev")), col = "red")
+df <- data.frame(fitted = fitted(fitRI2), resid = residuals(fitRI2, scaled = TRUE))
+gg4 <- ggplot(df, aes(fitted,resid)) + geom_point(pch = 21) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") +
+  labs(x = "Fitted values", y = "Residuals", title = "Residuals vs Fitted values")
+gg5 <- ggplot(df, aes(sample=resid)) + stat_qq(pch = 19) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
+  labs(x = "Theoretical quantiles", y = "Standardized residuals", title = "Normal Q-Q")
+
+gg1[[2]]$school + ggtitle("QQ-plot of random intercepts")
+```
+
+The QQ-plot of random intercepts is used to check the normal assumption of the $\gamma_i$’s. In this plot the quantiles agree fairly well, as the points more or less correspond to a straight line. Here there is an outlier in the bottom left corner. 
+
+The plot named “Random intercept (RI)” can be used to check whether there is a difference between the Ris or not. 
+
+The plot showing the density of RI can be used to compare the observed density of the math scores to the density of the normal distribution with mean 0 and standard deviation $\hat\tau_0$. They are somewhat in agreement, however there are some outliers in the left tail. But as there are only 49 schools, which is a rather low number of schools, one cannot expect the densities to agree perfectly as one would need more data.
+ 
+
+The plot named “Residuals vs. Fitted values” is used to check if there is a relationship between the residuals and the fitted values. Ideally the points should scatter heterogeneously around the horizontal dotted line (0). There seems to be a trend for the more extreme fitted values, but for values where we have lots of data we observe the wanted behaviour. The unwanted behaviour at the extreme values may be due to chance which should be investigated further.
+
+The normal QQ plot checks the normality assumption of the standardised residuals. Ideally the points should follow the dashed line. Here the quantiles agree, as the points lie more or less on the dashed line.
+
 # d)
+
+
+
 # e)
 
