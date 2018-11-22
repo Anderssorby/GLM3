@@ -1,7 +1,7 @@
 ---
 title: "Logistic regression and Poisson regression"
 author: "Anders Christiansen Sørby, Edvard Hove, Angela Maiken Johnsen"
-date: "October 4, 2018"
+date: "November 23, 2018"
 output:
   pdf_document: default
   html_document:
@@ -39,7 +39,7 @@ ggpairs(data = dataset, mapping = aes(col = gender, alpha=0.7), columns = c("soc
 ```
 From the plot it can be seen from the top and bottom right panel that girls have higher average maths scores than boys. This is because the mean of the blue box plots in the top right panel (corresponding to the girls' maths scores) are higher than that of the boys' (red boxes). However, as 0 is included in all the box plots, the difference is not too big. The same conclusion can be drawn from the bottom right panel; here the distribution of the girls' maths scores have a peak slightly more to the right than that of the boys.  
 
-The middle section shows that the gender differences are small for the raven tests. However mostly there are few differences between the different social class. 
+The middle section shows that the gender differences are small for the raven tests. For the most part there are also few differences between the different social classes. 
 
 Fitting a linear model with math as response and raven and gender as covariates:
 ```{r}
@@ -51,10 +51,10 @@ The model for the $k$th student is thus
 $$
 Y_k={\bf x}_k \pmb{\beta} + \varepsilon_k,
 $$
-where the $\varepsilon_k$s are independent, have mean 0 and variance $\sigma^2$. Here the $Y_k$ is the response, $\bf x_k$ are the covariates, $\varepsilon_k$ are the errors and $\pmb{\beta}$ the fixed effects parameters.
-Here the parameter estimates are $\hat\beta_0 = -1.313$,  $\hat\beta_{\mathrm{raven}} = 0.1965$ and $\hat\beta_{\mathrm{gendergirl}} = 2.538$. This means that being a girl has a positive impact on the maths test score, and a positive raven test score also gives a positive impact on the maths test score. Here $\hat\beta_0$, i. e. the intercept, corresponds to the parameter estimate for a boy. 
+where the $\varepsilon_k$s are independent, have mean 0 and variance $\sigma^2$. Here the $Y_k$ is the response, $\mathbf{x}_k$ are the covariates, $\varepsilon_k$ are the errors and $\pmb{\beta}$ the fixed effects parameters.
+Here the parameter estimates are $\hat\beta_0 = -1.313$,  $\hat\beta_{\mathrm{raven}} = 0.1965$ and $\hat\beta_{\mathrm{gendergirl}} = 2.538$. This means that being a girl has a positive effect on the maths test score, and a positive raven test score also gives a positive effect on the maths test score. Here $\hat\beta_0$, i. e. the intercept, corresponds to the parameter estimate for a boy. 
 By looking at the $p$ values of the parameter estimates, all of them are highly significant. 
-In this model we are investigating if there is a linear relationship between maths test score and raven test score and gender, and we are assuming that the maths test score does not depend on social status and which school the student comes from.
+In this model we are investigating if there is a linear relationship between maths test score and raven test score and gender, and we have not included social status and which school the student comes from.
 
 # b)
 Now a random intercept model with math as response and raven and gender as covariates as before, in addition to school as a random intercept. This can be written mathematically as
@@ -66,7 +66,7 @@ As before $\bf Y_i$ is the response, $\bf X_i$ the covariates, $\beta$ the fixed
 The response, $\bf Y_i$, is a $n_i\times 1$ vector, where $n_i$ is the number of observations from cluster $i$.
 Each student has its own row in the matrix $\bf X_i$.
 Each row contains an intercept and 2 covariates, making it an $n_i \times 3$ matrix, and $\beta$ a $3 \times 1$ vector.
-The vector ${\bf 1}$ is a $n_i\times 1$ vector consisting of only 1's, and realizations of the random variable $\gamma_{0i}$ are scalars.
+The vector ${\bf 1}$ is a $n_i\times 1$ vector consisting of only 1', and realizations of the random variable $\gamma_{0i}$ are scalars.
 Lastly $\varepsilon_{i}$ has the same dimensions as $Y_i$, that is $n_i\times 1$.
 In our case this means the number of students from school $i$.
 We assume that $\gamma_{0i} \sim \mathcal{N}(0,\tau_0^2)$ and $\varepsilon_{i} \sim \mathcal{N}_{n_i}(0,\sigma^2I)$.
@@ -78,19 +78,19 @@ library(lme4)
 fitRI1 <- lmer(math ~ raven + gender + (1 | school), data = dataset)
 summary(fitRI1)
 ```
-The estimates for this model are more or less in agreement with those of the previous one.
+The estimates for this model are more or less in agreement with those of the previous one, as the $\beta$s are rather similar.
 Girls and those who do well on the raven test are still expected to do better on the math test.
 The model predicts girls to score 2.511 points higher on the test than boys, and a student who scores 1 point higher on the raven test is predicted to score 0.214 points higher on the math test.
-The new model estimates the effect from a good raven test to be slightly higher (0.214 vs 0.197), and the effect of gender to be slightly lower (2.511 vs 2.538).
+The new model estimates the effect from a good raven test to be slightly higher (0.214 vs 0.197), and the effect of being a girl is slightly lower (2.511 vs 2.538).
 
 The p-values are omitted from the printout because the common assumptions used to compute p-values does not hold in this model. There are no analytical results for the null distribution of parameter estimates in complex situations for mixed models. The null distribution is the distribution of the test statistic when the null hypothesis is true. In general the parameter estimates are not t-distributed for finite size samples though it holds asymptotically.
 
-We can test the siginificance of the $\beta_{raven}$ parameter by doing a hypothesis test $H_0: \beta_{raven} = 0$ against $H_1:\beta_{raven} \neq 0$. This can be done with a Wald-test which in this case reduces to a Z-test. 
+We can test the siginificance of the $\beta_\text{raven}$ parameter by doing a hypothesis test $H_0: \beta_\text{raven} = 0$ against $H_1:\beta_\text{raven} \neq 0$. This can be done with a Wald-test which in this case reduces to a Z-test because we are only testing one covariate. 
 ```{r }
 pvalue <- 2*(1-pnorm(abs(9.197)))
 pvalue
 ```
-The t-value for raven is rather big so the following pvalue is very small. We are forced to reject the null hypothesis. 
+The t-value for raven is rather big (9.197) so the following p-value is very small. We are forced to reject the null hypothesis. 
 
 Also we can compute a $(1-\alpha)\cdot100\% = 95\%$-confidence interval for the effect of female gender on math score. 
 \begin{align*}
@@ -101,7 +101,7 @@ Also we can compute a $(1-\alpha)\cdot100\% = 95\%$-confidence interval for the 
 
 # c)
 
-We will now consider a model without the gender covariate.
+We will now consider a random intercept model without the gender covariate.
 
 ```{r }
 fitRI2 <- lmer(math ~ raven + (1 | school), data = dataset)
@@ -109,33 +109,33 @@ summary(fitRI2)
 ```
 
 The intra class covariance between $Y_{ij}$ and $Y_{il}$ is
-\begin{equation}
+\begin{equation*}
 \text{Cov}({\bf Y}_i)=\tau_0^2 \mathbf{11}^T + \sigma^2 \mathbf{I}
-\end{equation}
+\end{equation*}
 with correlation
-\begin{equation}
+\begin{equation*}
 \text{Corr}(Y_{ij},Y_{il})=\frac{\text{Cov}(Y_{ij},Y_{il})}{\sqrt{\text{Var}(Y_{ij})\text{Var}(Y_{il})}}=\frac{\tau_0^2}{\tau_0^2+\sigma^2} \text{ for }j\neq l.
-\end{equation}
+\end{equation*}
 
 From the summary of the model we get $\hat\sigma^2=20.711$ and $\hat\tau_0^2=4.002$ which means that $\text{Corr}(Y_{ij},Y_{il}) = 0.1619$. This correlation is rather low. The variance between different students has far more to say than the variation between schools which makes sense. However there is still a noticable effect of different schools.
 
 In general we can consider a joint distribution of $Y$ and $\gamma \sim N(0,G)$
-\begin{equation}
+\begin{equation*}
 \begin{pmatrix} {\bf Y}\\ {\boldsymbol \gamma} \end{pmatrix} \sim
 N(\begin{pmatrix} {\bf X}{\boldsymbol \beta} \\ {\bf 0}\end{pmatrix},
 \begin{pmatrix}{\bf V}={\bf U}{\bf G}{\bf U}^T+\sigma^2{\bf I} & {\bf U}{\bf G}\\
 {\bf G}{\bf U}^T & {\bf G}\end{pmatrix})
-\end{equation}
+\end{equation*}
 where $G$ is a block diagonal matrix of $Q$ which is the covariance matrix of $\gamma_i$. $U$ is a design matrix for random effects similar to $X$ for fixed effects.
 
 We can estimate the random intercept as follows
-\begin{equation}
+\begin{equation*}
 \hat{{\boldsymbol \gamma}}_i=\hat{\bf Q}{\bf U}_i^T\hat{\bf V}_i^{-1}({\bf Y}_i-{\bf X}_i\hat{{\boldsymbol \beta}})
-\end{equation}
-where in our model $U_i=\mathbf 1$ and $\mathbf Q=\tau_0^2$. Then for our model it reduces to
-\begin{equation}
+\end{equation*}
+where in our model $U_i=\mathbf 1$ and $\mathbf Q=\tau_0^2$. Then the expression reduces to
+\begin{equation*}
 \hat{\gamma}_{0i}=\frac{n_i \hat{\tau}_{0}^2}{\hat{\sigma}^2+n_i \hat{\tau}_{0}^2}e_i
-\end{equation}
+\end{equation*}
 where $e_i=\frac{1}{n_i} \sum_{j=1}^{n_i} (Y_{ij}-{\bf x}_{ij}^T\hat{{\boldsymbol \beta}})$ is the average residual. 
 
 ```{r plots-c1}
@@ -169,13 +169,12 @@ df <- data.frame(x = rep(range(dataset$raven), each = 49),
 ggplot(df, aes(x = x, y = y, col = School)) + geom_line() + labs(x = "raven score", y = "math score")
 ```
 
-The QQ-plot of random intercepts is used to check the normal assumption of the $\gamma_i$’s. In this plot the quantiles agree fairly well, as the points more or less correspond to a straight line. Here there is an outlier in the bottom left corner. 
+The QQ-plot of random intercepts is used to check the normal assumption of the $\gamma_i$s. In this plot the quantiles agree fairly well, as the points more or less correspond to a straight line. However there is an outlier in the bottom left corner. 
 
-The plot named “Random intercept (RI)” can be used to check whether there is a difference between the Ris or not. 
+The plot named “Random intercept (RI)” can be used to check the shape of the distribution of the predicted RIs and their uncertainties.
 
-The plot showing the density of RI can be used to compare the observed density of the math scores to the density of the normal distribution with mean 0 and standard deviation $\hat\tau_0$. They are somewhat in agreement, however there are some outliers in the left tail. But as there are only 49 schools, which is a rather low number of schools, one cannot expect the densities to agree perfectly as one would need more data.
+The plot showing the density of RI can be used to compare the observed density of the random intercepts to the density of the normal distribution with mean 0 and standard deviation $\hat\tau_0$, which we are estimating the data to follow. They are somewhat in agreement, however there are some outliers in the left tail. But as there are only 49 schools, which is a rather low number of schools, one cannot expect the densities to agree perfectly as one would need more data.
  
-
 The plot named “Residuals vs. Fitted values” is used to check if there is a relationship between the residuals and the fitted values. Ideally the points should scatter heterogeneously around the horizontal dotted line (0). There seems to be a trend for the more extreme fitted values, but for values where we have lots of data we observe the wanted behaviour. The unwanted behaviour at the extreme values may be due to chance which should be investigated further.
 
 The normal QQ plot checks the normality assumption of the standardised residuals. Ideally the points should follow the dashed line. Here the quantiles agree, as the points lie more or less on the dashed line.
@@ -191,7 +190,7 @@ fitRI3 <- lmer(math ~ raven + social + (1 | school), data = dataset)
 anova(fitRI2, fitRI3)
 ```
 
-We are not using REML estimation for the parameters of when doing the ANOVA test. This is because it would otherwise break the assumption of nested models. <!--Er vi helt sikre på dette?-->|
+The print-out sayd “refitting model(s) with ML (instead of REML)” because we are not using REML estimation for the parameters when doing the ANOVA test. This is because it would otherwise break the assumption of nested models. 
 
 ```{r model-d2}
 fitRIS <- lmer(math ~ raven + (1 + raven | school), data = dataset)
@@ -213,12 +212,32 @@ ggarrange(gg1, gg2, ncol = 2, legend = FALSE)
 
 The random intercept and slope model we have fitted has formula
 
-\begin{equation}
+\begin{equation*}
 \hat{\beta}_0+\hat{\beta}_1\text{raven}+\hat{\gamma}_{i0}+\hat{\gamma}_{1i}\text{raven}
-\end{equation}
+\end{equation*}
 
-We see from the model that there is a correlation between the random intercept and the random slope
+We see from the model that there is a correlation between the random intercept and the random slope.
 
 # e)
 
-If we want to model the probability for a student to fail maths we are considering a binary response, sucess or failiure, which means it's a Bernoulli (or ungrouped binomial) distribution. This means we need to use a Generalized Linear Mixed Model (GLMM).
+If we want to model the probability for a student to fail maths we are considering a binary response, sucess or failiure, which means it's a Bernoulli (or ungrouped binomial) distribution. The LMM only has a normal response. This means we need to use a Generalized Linear Mixed Model (GLMM).
+
+Using this model we would add the random school intercept in the $\eta_{ij} = x_{ij}^\top\beta + \gamma_{0i}$. Then the effect on the response becomes a multiplicative effect.
+
+The challenges with this type of models is that it is difficult to maximise the likelihood function. In a GLMM the response follows the distribution of a exponential family when conditioned on $\gamma_i$, i.e. $f(y_{ij}|\gamma_i)$ belongs to an exponential family. However, when maximising the likelihood we need the marginal distribution. The marginal distribution can be calculated by
+$$
+f(y_{ij}) = \int_{\gamma_i} f(y_{ij}| \gamma_i)f(\gamma_i) d\gamma_i ,
+$$
+where $f(\gamma_i) \text{ is } N({\bf 0},{\bf Q})$. This is, however, hard to compute as one would have to consider all the $\gamma_i$s. The likelihood can be written
+\begin{equation*}
+L({\boldsymbol \beta},\vartheta)&=\prod_{i=1}^m f(\bf{y}_i\mid {\boldsymbol \beta},\vartheta),
+\end{equation*}
+where
+$$
+f({\bf y}_i\mid {\boldsymbol \beta},\vartheta)=\int_{{\boldsymbol \gamma}_i} f({\bf y}_i \mid {\boldsymbol \gamma}_i,{\boldsymbol \beta}) f({\boldsymbol \gamma}_i \mid {\bf Q}) d{\boldsymbol \gamma}_i
+=\int_{{\boldsymbol \gamma}_i} \prod_{j=1}^{n_i}f(y_{ij} \mid {\boldsymbol \gamma}_i,{\boldsymbol \beta}) f({\boldsymbol \gamma}_i \mid {\bf Q}) d{\boldsymbol \gamma}_i
+$$
+
+
+
+This is only in closed form in special cases, like the normal distribution. This is a complicated numerical problem, and may be solved using for instance Laplace approximation, adaptive Gaussian quadratures, penalized quasilikelihood and various Bayesian methods etc.
