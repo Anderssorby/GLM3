@@ -221,3 +221,4 @@ We see from the model that there is a correlation between the random intercept a
 
 # e)
 
+If we want to model the probability for a student to fail maths we are considering a binary response, sucess or failiure, which means it's a Bernoulli (or ungrouped binomial) distribution. This means we need to use a Generalized Linear Mixed Model (GLMM).
