@@ -230,7 +230,7 @@ f(y_{ij}) = \int_{\gamma_i} f(y_{ij}| \gamma_i)f(\gamma_i) d\gamma_i ,
 $$
 where $f(\gamma_i) \text{ is } N({\bf 0},{\bf Q})$. This is, however, hard to compute as one would have to consider all the $\gamma_i$s. The likelihood can be written
 \begin{equation*}
-L({\boldsymbol \beta},\vartheta)&=\prod_{i=1}^m f(\bf{y}_i\mid {\boldsymbol \beta},\vartheta),
+L({\boldsymbol \beta},\vartheta)=\prod_{i=1}^m f(\bf{y}_i\mid {\boldsymbol \beta},\vartheta),
 \end{equation*}
 where
 $$
